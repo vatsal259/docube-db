@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>docube-db — fast fuzzy search over text codes</title>
+  <meta name="description" content="docube-db is a small, file-based Java library for fast fuzzy search over lists of text codes — invoice numbers, shipment IDs, serial numbers. Structure to prune, fuzzy scoring to rank." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- global-nav -->
+  <nav class="global-nav" aria-label="Global">
+    <div class="global-nav__inner">
+      <a class="global-nav__brand" href="#top">docube-db</a>
+      <div class="global-nav__links">
+        <a href="#problem">Problem</a>
+        <a href="#demo">Demo</a>
+        <a href="#how">How it works</a>
+        <a href="#modes">Modes</a>
+        <a href="#start">Quick start</a>
+      </div>
+      <a class="global-nav__cta" href="https://github.com/vatsal259/docube-db" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </nav>
+
+  <!-- hero -->
+  <header id="top" class="tile tile--light hero center">
+    <div class="tile__inner">
+      <p class="hero__eyebrow">Java &middot; file-based &middot; no server</p>
+      <h1 class="hero__title">Find the code that's<br />almost right.</h1>
+      <p class="hero__lead">Fast fuzzy search over lists of text codes — invoice numbers, shipment IDs, serial numbers. Structure to prune, fuzzy scoring to rank.</p>
+      <div class="cta-row">
+        <a class="btn btn--primary" href="#demo">Try the live demo</a>
+        <a class="btn btn--ghost" href="https://github.com/vatsal259/docube-db" target="_blank" rel="noopener">View on GitHub</a>
+      </div>
+
+      <div class="hero__codecard" aria-hidden="true">
+        <div class="kv"><span class="kv__k">Your list</span><span class="kv__v">INV-2024-IND-88492</span></div>
+        <div class="kv"><span class="kv__k">User typed</span><span class="kv__v">INV-2024-IND-8849<em>Z</em></span></div>
+        <div class="kv kv--hit"><span class="kv__k">Result</span><span class="kv__v">INV-2024-IND-88492 <span class="kv__score">0.94</span></span></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- live demo -->
+  <section id="demo" class="tile tile--light">
+    <div class="tile__inner">
+    <div class="section-head center">
+      <p class="eyebrow">Live, in your browser</p>
+      <h2 class="display-lg">Try it now.</h2>
+      <p class="lead muted narrow">Type a code with a typo, pick a mode, and watch docube prune the catalog and rank the closest matches — running right here, no server.</p>
+    </div>
+
+    <div class="demo">
+      <div class="demo__controls">
+        <label class="field">
+          <span class="field__label">Query</span>
+          <input id="q" class="search-input" type="text" value="INV-2024-IND-8849Z" autocomplete="off" spellcheck="false" />
+        </label>
+
+        <label class="field">
+          <span class="field__label">Mode</span>
+          <select id="mode" class="select">
+            <option value="TREE_UNTIL_BREAK" selected>TREE_UNTIL_BREAK — fuzzy, one typo</option>
+            <option value="BEAM_WALK">BEAM_WALK — multiple typos</option>
+            <option value="PREFIX_STRICT">PREFIX_STRICT — starts with…</option>
+            <option value="EXACT">EXACT — strict equality</option>
+          </select>
+        </label>
+
+        <div class="field-grid">
+          <label class="field">
+            <span class="field__label">chunkSize</span>
+            <input id="chunk" class="select" type="number" min="1" max="8" value="4" />
+          </label>
+          <label class="field">
+            <span class="field__label">minScore</span>
+            <input id="minScore" class="select" type="number" min="0" max="1" step="0.05" value="0.5" />
+          </label>
+        </div>
+      </div>
+
+      <div class="demo__results">
+        <div class="result-meta" id="meta"></div>
+        <ol class="results" id="results"></ol>
+      </div>
+    </div>
+
+    <!-- live per-mode explainer -->
+    <div class="explainer" id="explainer">
+      <div class="explainer__viz" id="explainerViz"></div>
+      <div class="explainer__text">
+        <span class="explainer__tag" id="explainerTag"></span>
+        <h3 class="explainer__title" id="explainerTitle"></h3>
+        <p class="explainer__desc" id="explainerDesc"></p>
+        <p class="explainer__analogy"><span id="explainerAnalogy"></span></p>
+      </div>
+    </div>
+
+    <details class="dataset">
+      <summary>Dataset (<span id="datasetCount">0</span> codes indexed)</summary>
+      <pre id="datasetDump" class="dataset__dump"></pre>
+    </details>
+    </div>
+  </section>
+
+  <!-- problem -->
+  <section id="problem" class="tile tile--parchment center">
+    <div class="tile__inner">
+      <h2 class="display-md">A scanner misreads one character.</h2>
+      <p class="lead muted narrow">A spreadsheet has 500,000 invoice numbers. You need the right row — fast, offline, on a laptop. Brute force is slow. Exact lookup fails on typos. docube sits in the middle.</p>
+      <div class="stat-row">
+        <div class="stat"><span class="stat__num">0</span><span class="stat__label">servers to run</span></div>
+        <div class="stat"><span class="stat__num">1</span><span class="stat__label">runtime dependency</span></div>
+        <div class="stat"><span class="stat__num">4</span><span class="stat__label">search modes</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- how it works -->
+  <section id="how" class="tile tile--dark center">
+    <div class="tile__inner">
+    <p class="eyebrow eyebrow--dark">How it works</p>
+    <h2 class="display-lg on-dark">Codes become paths<br />through a trie of chunks.</h2>
+    <p class="lead muted-dark narrow">Search walks the trie to prune down to a few candidates, then scores the survivors with Levenshtein and returns the best. A query starting with <code>SHP-</code> never looks at <code>INV-</code> rows.</p>
+
+    <div class="pipe">
+      <div class="pipe__step"><span class="pipe__n">1</span>normalize</div>
+      <div class="pipe__arrow">&rarr;</div>
+      <div class="pipe__step"><span class="pipe__n">2</span>chunk</div>
+      <div class="pipe__arrow">&rarr;</div>
+      <div class="pipe__step"><span class="pipe__n">3</span>trie recall</div>
+      <div class="pipe__arrow">&rarr;</div>
+      <div class="pipe__step"><span class="pipe__n">4</span>rerank</div>
+      <div class="pipe__arrow">&rarr;</div>
+      <div class="pipe__step"><span class="pipe__n">5</span>filter &amp; sort</div>
+    </div>
+
+    <pre class="codeblock codeblock--dark"><code>INV-2024-IND-88492  &rarr;  [INV-][2024][-IND][-884][92]</code></pre>
+    </div>
+  </section>
+
+  <!-- modes -->
+  <section id="modes" class="tile tile--parchment">
+    <div class="tile__inner">
+    <div class="section-head center">
+      <p class="eyebrow">Search modes</p>
+      <h2 class="display-lg">One pipeline, four recall strategies.</h2>
+    </div>
+    <div class="card-grid">
+      <article class="card">
+        <h3 class="card__title">EXACT</h3>
+        <p class="card__body">Literal match, no trie, no fuzzing. Score 1.0 or nothing.</p>
+        <p class="card__use">Strict gate, validation</p>
+      </article>
+      <article class="card">
+        <h3 class="card__title">PREFIX_STRICT</h3>
+        <p class="card__body">Walk the trie exactly; return everything under the matched prefix.</p>
+        <p class="card__use">Autocomplete, "starts with…"</p>
+      </article>
+      <article class="card card--accent">
+        <h3 class="card__title">TREE_UNTIL_BREAK <span class="badge">default</span></h3>
+        <p class="card__body">Walk exactly until a chunk mismatches, peek fuzzy siblings once, then rank.</p>
+        <p class="card__use">Scanner / OCR typos, one mistake</p>
+      </article>
+      <article class="card">
+        <h3 class="card__title">BEAM_WALK</h3>
+        <p class="card__body">Keep several candidate paths open at every chunk, then rank.</p>
+        <p class="card__use">Multiple typos, scrambled input</p>
+      </article>
+    </div>
+    </div>
+  </section>
+
+  <!-- quick start -->
+  <section id="start" class="tile tile--dark">
+    <div class="tile__inner">
+    <div class="section-head center">
+      <p class="eyebrow eyebrow--dark">Quick start</p>
+      <h2 class="display-lg on-dark">No database to install.</h2>
+      <p class="lead muted-dark narrow">Requires JDK 21. Jackson is the only runtime dependency.</p>
+    </div>
+    <pre class="codeblock codeblock--dark"><code>DocubeDB db = new DocubeDB("/data/codes");
+
+<span class="c-com">// Create a collection (chunkSize = 4) and load a file in one step</span>
+DocubeFile invoices = db.createFileFromRecords(
+        "invoices", 4, Path.of("invoices.txt"));
+
+<span class="c-com">// Default fuzzy search</span>
+List&lt;SearchHit&gt; hits = invoices.search(
+        "INV-2024-IND-8849Z", 5, 0.85, SearchMode.TREE_UNTIL_BREAK);
+
+SearchHit best = hits.get(0);
+System.out.println(best.getText() + " @ " + best.getScore());</code></pre>
+    <div class="cta-row center">
+      <a class="btn btn--primary" href="https://github.com/vatsal259/docube-db" target="_blank" rel="noopener">Read the README</a>
+    </div>
+    </div>
+  </section>
+
+  <!-- footer -->
+  <footer class="footer">
+    <div class="footer__inner">
+      <div class="footer__brand">docube-db</div>
+      <p class="footer__note">A small, file-based fuzzy-search library for text codes. Structure to prune, fuzzy scoring to rank.</p>
+      <div class="footer__links">
+        <a href="https://github.com/vatsal259/docube-db" target="_blank" rel="noopener">GitHub</a>
+        <a href="#demo">Demo</a>
+        <a href="#start">Quick start</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
