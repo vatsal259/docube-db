@@ -1,6 +1,8 @@
 # docube-db
 
-**docube-db** is a small Java library for **fast fuzzy search over lists of text codes** — invoice numbers, shipment IDs, serial numbers, part codes, anything that shares prefixes.
+Java 21 library for **file-based fuzzy search over prefix-sharing codes** (invoice numbers, shipment IDs, serials). No server, no database — a chunked trie on disk plus Levenshtein ranking.
+
+Demo: [vatsal259.github.io/docube-db](https://vatsal259.github.io/docube-db/)
 
 Keep a list of valid strings on disk. When someone types or scans a code that is *almost* right, docube finds the closest matches **without scanning the whole list every time**.
 
@@ -36,7 +38,7 @@ Both win the same way: never read the whole dataset. They just use a different s
 
 ## The problem
 
-A spreadsheet has 500,000 invoice numbers. A scanner misreads one character. You need the right row — fast, offline, on a laptop.
+A warehouse catalog has tens of thousands of invoice, shipment, or serial codes. A scanner misreads one character. You need the right row — fast, offline, on a laptop.
 
 Brute force (compare to every line) is slow. Exact lookup fails on typos. docube sits in the middle: **structure to prune, fuzzy scoring to rank**.
 
